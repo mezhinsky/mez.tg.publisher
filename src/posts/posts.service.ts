@@ -10,6 +10,7 @@ export interface ArticlePayload {
   excerpt?: string;
   url: string;
   coverUrl?: string;
+  mediaUrls?: string[];
   tags: string[];
 }
 

@@ -27,6 +27,7 @@ export class EventsService {
       excerpt: dto.excerpt,
       url: dto.url,
       coverUrl: dto.coverUrl,
+      mediaUrls: dto.mediaUrls,
       tags: dto.tags,
     };
 

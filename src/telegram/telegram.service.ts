@@ -23,6 +23,18 @@ export interface SendPhotoOptions {
   parseMode?: 'HTML' | 'Markdown' | 'MarkdownV2';
 }
 
+export interface SendMediaGroupOptions {
+  chatId: string;
+  mediaUrls: string[];
+  caption?: string;
+  parseMode?: 'HTML' | 'Markdown' | 'MarkdownV2';
+}
+
+export interface SendMediaGroupResult {
+  messageIds: number[];
+  chatId: string | number;
+}
+
 @Injectable()
 export class TelegramService implements OnModuleInit {
   private readonly logger = new Logger(TelegramService.name);
@@ -102,6 +114,42 @@ export class TelegramService implements OnModuleInit {
     return {
       messageId: result.message_id,
       chatId: result.chat.id,
+    };
+  }
+
+  /**
+   * Send a media group (album) with multiple photos
+   * Caption is only shown on the first photo
+   */
+  async sendMediaGroup(options: SendMediaGroupOptions): Promise<SendMediaGroupResult> {
+    if (!this.isReady()) {
+      throw new Error('Telegram bot not initialized');
+    }
+
+    const { chatId, mediaUrls, caption, parseMode = 'HTML' } = options;
+
+    if (mediaUrls.length === 0) {
+      throw new Error('mediaUrls must contain at least one URL');
+    }
+
+    if (mediaUrls.length > 10) {
+      throw new Error('mediaUrls cannot contain more than 10 items (Telegram limit)');
+    }
+
+    this.logger.debug(`Sending media group (${mediaUrls.length} photos) to ${chatId}`);
+
+    const media = mediaUrls.map((url, index) => ({
+      type: 'photo' as const,
+      media: url,
+      // Caption only on the first photo
+      ...(index === 0 && caption ? { caption, parse_mode: parseMode } : {}),
+    }));
+
+    const results = await this.bot.telegram.sendMediaGroup(chatId, media);
+
+    return {
+      messageIds: results.map((msg) => msg.message_id),
+      chatId: results[0].chat.id,
     };
   }
 

@@ -19,6 +19,7 @@ interface ArticlePayload {
   excerpt?: string;
   url: string;
   coverUrl?: string;
+  mediaUrls?: string[];
   tags: string[];
 }
 
@@ -89,30 +90,53 @@ export class DeliveryProcessor extends WorkerHost {
 
     try {
       const payload = delivery.post.payload as unknown as ArticlePayload;
-      let result: { messageId: number; chatId: string | number };
+      let telegramMessageId: string;
 
-      // Send photo with caption if coverUrl exists, otherwise send text message
-      if (payload.coverUrl) {
+      // Determine send method based on media availability
+      const hasMediaGroup = payload.mediaUrls && payload.mediaUrls.length >= 2;
+      const hasSingleMedia = payload.mediaUrls?.length === 1 || payload.coverUrl;
+
+      if (hasMediaGroup) {
+        // Send media group (album) for 2+ images
         const caption = this.formatCaption(payload);
-        result = await this.telegramService.sendPhoto({
+        const result = await this.telegramService.sendMediaGroup({
           chatId: delivery.channel.chatId,
-          photoUrl: payload.coverUrl,
+          mediaUrls: payload.mediaUrls!,
           caption,
           parseMode: 'HTML',
         });
+        // Store first message ID (the one with caption)
+        telegramMessageId = result.messageIds.join(',');
+        this.logger.debug(
+          `Sent media group (${payload.mediaUrls!.length} photos) to ${delivery.channel.key}`,
+        );
+      } else if (hasSingleMedia) {
+        // Send single photo
+        const photoUrl = payload.mediaUrls?.[0] || payload.coverUrl!;
+        const caption = this.formatCaption(payload);
+        const result = await this.telegramService.sendPhoto({
+          chatId: delivery.channel.chatId,
+          photoUrl,
+          caption,
+          parseMode: 'HTML',
+        });
+        telegramMessageId = String(result.messageId);
         this.logger.debug(`Sent photo message to ${delivery.channel.key}`);
       } else {
+        // Send text message (no media)
         const message = this.formatMessage(payload);
-        result = await this.telegramService.sendMessage({
+        const result = await this.telegramService.sendMessage({
           chatId: delivery.channel.chatId,
           text: message,
           parseMode: 'HTML',
           disableWebPagePreview: false,
         });
+        telegramMessageId = String(result.messageId);
         this.logger.debug(`Sent text message to ${delivery.channel.key}`);
       }
 
-      const telegramMessageId = String(result.messageId);
+      // Extract first message ID for URL building
+      const firstMessageId = parseInt(telegramMessageId.split(',')[0], 10);
 
       await this.deliveriesService.markAsSent(deliveryId, telegramMessageId);
       await this.postsService.updatePostStatus(delivery.postId);
@@ -126,7 +150,7 @@ export class DeliveryProcessor extends WorkerHost {
         const telegramUrl = delivery.channel.username
           ? this.telegramService.buildMessageUrl(
               delivery.channel.username,
-              result.messageId,
+              firstMessageId,
             )
           : undefined;
 
@@ -148,7 +172,7 @@ export class DeliveryProcessor extends WorkerHost {
         telegramUrl: delivery.channel.username
           ? this.telegramService.buildMessageUrl(
               delivery.channel.username,
-              result.messageId,
+              firstMessageId,
             )
           : undefined,
       };
