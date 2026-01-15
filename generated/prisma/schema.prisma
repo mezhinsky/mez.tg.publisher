@@ -1,0 +1,121 @@
+// Prisma Schema for mez.tg.publisher
+// Telegram Publisher Microservice
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// Channel - Telegram channel configuration
+// ============================================
+model Channel {
+  id        String   @id @default(cuid())
+  key       String   @unique // Unique identifier like "mem_main", "mem_starwars"
+  chatId    String // Telegram chat_id (can be numeric or @username)
+  username  String? // @channel_username (without @)
+  title     String? // Human-readable channel name
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  rules      ChannelRule[]
+  deliveries PostDelivery[]
+
+  @@index([isActive])
+  @@index([key])
+}
+
+// ============================================
+// ChannelRule - Routing rules for channels
+// Determines which channels receive which posts
+// ============================================
+model ChannelRule {
+  id        String          @id @default(cuid())
+  channelId String
+  type      ChannelRuleType @default(TAG)
+  value     String // e.g., "star-wars", "marvel"
+  isActive  Boolean         @default(true)
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+
+  // Relations
+  channel Channel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+
+  @@unique([channelId, type, value])
+  @@index([type, value])
+  @@index([isActive])
+}
+
+enum ChannelRuleType {
+  TAG // Match by article tag
+  CATEGORY // Future: match by category
+  ALL // Future: receive all posts
+}
+
+// ============================================
+// Post - Represents a single article publication
+// One Post per articleId (idempotent)
+// ============================================
+model Post {
+  id          String     @id @default(cuid())
+  articleId   String     @unique // External article ID (from articles service)
+  status      PostStatus @default(PENDING)
+  payload     Json // Snapshot: { title, excerpt, url, coverUrl, tags }
+  payloadHash String? // Hash of payload for change detection
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  // Relations
+  deliveries PostDelivery[]
+
+  @@index([status])
+  @@index([articleId])
+  @@index([createdAt])
+}
+
+enum PostStatus {
+  PENDING // Not yet processed
+  SENT // All deliveries successful
+  PARTIAL // Some deliveries failed
+  FAILED // All deliveries failed
+}
+
+// ============================================
+// PostDelivery - Delivery to a specific channel
+// One PostDelivery per (Post, Channel) pair
+// ============================================
+model PostDelivery {
+  id                String         @id @default(cuid())
+  postId            String
+  channelId         String
+  status            DeliveryStatus @default(PENDING)
+  telegramMessageId String? // Telegram message_id after successful send
+  attempts          Int            @default(0)
+  lastError         String? // Last error message if failed
+  sentAt            DateTime? // When successfully sent
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+
+  // Relations
+  post    Post    @relation(fields: [postId], references: [id], onDelete: Cascade)
+  channel Channel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, channelId])
+  @@index([status])
+  @@index([channelId])
+  @@index([createdAt])
+}
+
+enum DeliveryStatus {
+  PENDING // Waiting in queue
+  SENT // Successfully delivered
+  FAILED // Failed after all retries
+  CANCELLED // Manually cancelled
+}
