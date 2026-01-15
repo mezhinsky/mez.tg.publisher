@@ -89,14 +89,28 @@ export class DeliveryProcessor extends WorkerHost {
 
     try {
       const payload = delivery.post.payload as unknown as ArticlePayload;
-      const message = this.formatMessage(payload);
+      let result: { messageId: number; chatId: string | number };
 
-      const result = await this.telegramService.sendMessage({
-        chatId: delivery.channel.chatId,
-        text: message,
-        parseMode: 'HTML',
-        disableWebPagePreview: false,
-      });
+      // Send photo with caption if coverUrl exists, otherwise send text message
+      if (payload.coverUrl) {
+        const caption = this.formatCaption(payload);
+        result = await this.telegramService.sendPhoto({
+          chatId: delivery.channel.chatId,
+          photoUrl: payload.coverUrl,
+          caption,
+          parseMode: 'HTML',
+        });
+        this.logger.debug(`Sent photo message to ${delivery.channel.key}`);
+      } else {
+        const message = this.formatMessage(payload);
+        result = await this.telegramService.sendMessage({
+          chatId: delivery.channel.chatId,
+          text: message,
+          parseMode: 'HTML',
+          disableWebPagePreview: false,
+        });
+        this.logger.debug(`Sent text message to ${delivery.channel.key}`);
+      }
 
       const telegramMessageId = String(result.messageId);
 
@@ -176,6 +190,37 @@ export class DeliveryProcessor extends WorkerHost {
     }
 
     return message;
+  }
+
+  // Caption for photos is limited to 1024 chars, so we use a shorter format
+  private formatCaption(payload: ArticlePayload): string {
+    const maxLength = 1024;
+    let caption = `<b>${this.escapeHtml(payload.title)}</b>\n\n`;
+
+    if (payload.excerpt) {
+      const remainingSpace = maxLength - caption.length - 100; // Reserve space for link and tags
+      const excerpt = payload.excerpt.length > remainingSpace
+        ? payload.excerpt.slice(0, remainingSpace - 3) + '...'
+        : payload.excerpt;
+      caption += `${this.escapeHtml(excerpt)}\n\n`;
+    }
+
+    caption += `<a href="${payload.url}">Read more</a>`;
+
+    if (payload.tags && payload.tags.length > 0) {
+      const hashtags = payload.tags
+        .slice(0, 3) // Fewer tags for caption
+        .map((tag) => `#${tag.replace(/[^a-zA-Z0-9_]/g, '_')}`)
+        .join(' ');
+      caption += `\n\n${hashtags}`;
+    }
+
+    // Ensure we don't exceed the limit
+    if (caption.length > maxLength) {
+      caption = caption.slice(0, maxLength - 3) + '...';
+    }
+
+    return caption;
   }
 
   private escapeHtml(text: string): string {
