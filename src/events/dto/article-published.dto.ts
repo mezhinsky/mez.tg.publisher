@@ -31,7 +31,9 @@ export class ArticlePublishedDto {
   @IsOptional()
   @IsArray()
   @IsUrl({}, { each: true })
-  @ArrayMaxSize(10, { message: 'mediaUrls can contain maximum 10 items (Telegram limit)' })
+  @ArrayMaxSize(10, {
+    message: 'mediaUrls can contain maximum 10 items (Telegram limit)',
+  })
   mediaUrls?: string[];
 
   @IsArray()

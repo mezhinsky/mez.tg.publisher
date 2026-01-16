@@ -1,4 +1,9 @@
-import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  Logger,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { DeliveryQueryDto } from './dto/delivery-query.dto';
 import { PaginatedResponseDto } from '../common/dto/paginated-response.dto';
@@ -14,7 +19,9 @@ export class DeliveriesService {
     private readonly queueService: QueueService,
   ) {}
 
-  async findAll(query: DeliveryQueryDto): Promise<PaginatedResponseDto<PostDelivery>> {
+  async findAll(
+    query: DeliveryQueryDto,
+  ): Promise<PaginatedResponseDto<PostDelivery>> {
     const where: Prisma.PostDeliveryWhereInput = {};
 
     if (query.postId) {
@@ -47,7 +54,12 @@ export class DeliveriesService {
       this.prisma.postDelivery.count({ where }),
     ]);
 
-    return new PaginatedResponseDto(deliveries, total, query.page ?? 1, query.limit ?? 20);
+    return new PaginatedResponseDto(
+      deliveries,
+      total,
+      query.page ?? 1,
+      query.limit ?? 20,
+    );
   }
 
   async findOne(id: string): Promise<PostDelivery> {
@@ -69,7 +81,10 @@ export class DeliveriesService {
   /**
    * Upsert a delivery for a post-channel pair
    */
-  async upsertDelivery(postId: string, channelId: string): Promise<PostDelivery> {
+  async upsertDelivery(
+    postId: string,
+    channelId: string,
+  ): Promise<PostDelivery> {
     const delivery = await this.prisma.postDelivery.upsert({
       where: {
         postId_channelId: { postId, channelId },
@@ -142,7 +157,10 @@ export class DeliveriesService {
   /**
    * Mark delivery as sent
    */
-  async markAsSent(id: string, telegramMessageId: string): Promise<PostDelivery> {
+  async markAsSent(
+    id: string,
+    telegramMessageId: string,
+  ): Promise<PostDelivery> {
     return this.prisma.postDelivery.update({
       where: { id },
       data: {

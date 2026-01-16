@@ -1,6 +1,20 @@
-import { IsOptional, IsString, IsEnum, IsDateString } from 'class-validator';
+import {
+  IsOptional,
+  IsString,
+  IsEnum,
+  IsDateString,
+  IsIn,
+} from 'class-validator';
 import { PaginationDto } from '../../common/dto/pagination.dto';
 import { PostStatus } from '../../../generated/prisma';
+
+const allowedSortBy = [
+  'createdAt',
+  'updatedAt',
+  'articleId',
+  'status',
+] as const;
+type PostSortBy = (typeof allowedSortBy)[number];
 
 export class PostQueryDto extends PaginationDto {
   @IsOptional()
@@ -18,4 +32,12 @@ export class PostQueryDto extends PaginationDto {
   @IsOptional()
   @IsDateString()
   to?: string;
+
+  @IsOptional()
+  @IsIn(allowedSortBy)
+  sortBy?: PostSortBy = 'createdAt';
+
+  @IsOptional()
+  @IsIn(['asc', 'desc'])
+  order?: 'asc' | 'desc' = 'desc';
 }

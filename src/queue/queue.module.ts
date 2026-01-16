@@ -1,7 +1,6 @@
 import { Module, forwardRef } from '@nestjs/common';
 import { BullModule } from '@nestjs/bullmq';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import Redis from 'ioredis';
 import { QueueService } from './queue.service';
 import { DeliveryProcessor } from './processors/delivery.processor';
 import { TELEGRAM_DELIVERY_QUEUE } from './constants';
@@ -16,8 +15,14 @@ import { ChannelsModule } from '../channels/channels.module';
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => {
         const redisUrl = configService.get<string>('redis.url');
+        if (!redisUrl) {
+          throw new Error('redis.url is not set');
+        }
         return {
-          connection: new Redis(redisUrl!, { maxRetriesPerRequest: null }),
+          connection: {
+            url: redisUrl,
+            maxRetriesPerRequest: null,
+          },
         };
       },
     }),

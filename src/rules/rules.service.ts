@@ -18,8 +18,15 @@ export class RulesService {
 
   constructor(private readonly prisma: PrismaService) {}
 
-  async findAll(query: RuleQueryDto): Promise<PaginatedResponseDto<ChannelRule>> {
+  async findAll(
+    query: RuleQueryDto,
+  ): Promise<PaginatedResponseDto<ChannelRule>> {
     const where: Prisma.ChannelRuleWhereInput = {};
+    const sortBy = query.sortBy ?? 'createdAt';
+    const order: Prisma.SortOrder = (query.order ?? 'desc') as Prisma.SortOrder;
+    let orderBy: Prisma.ChannelRuleOrderByWithRelationInput = {
+      createdAt: 'desc',
+    };
 
     if (query.channelId) {
       where.channelId = query.channelId;
@@ -37,12 +44,31 @@ export class RulesService {
       where.isActive = query.isActive;
     }
 
+    switch (sortBy) {
+      case 'updatedAt':
+        orderBy = { updatedAt: order };
+        break;
+      case 'value':
+        orderBy = { value: order };
+        break;
+      case 'type':
+        orderBy = { type: order };
+        break;
+      case 'isActive':
+        orderBy = { isActive: order };
+        break;
+      case 'createdAt':
+      default:
+        orderBy = { createdAt: order };
+        break;
+    }
+
     const [rules, total] = await Promise.all([
       this.prisma.channelRule.findMany({
         where,
         skip: query.skip,
         take: query.take,
-        orderBy: { createdAt: 'desc' },
+        orderBy,
         include: {
           channel: {
             select: { id: true, key: true, title: true },
@@ -52,7 +78,12 @@ export class RulesService {
       this.prisma.channelRule.count({ where }),
     ]);
 
-    return new PaginatedResponseDto(rules, total, query.page ?? 1, query.limit ?? 20);
+    return new PaginatedResponseDto(
+      rules,
+      total,
+      query.page ?? 1,
+      query.limit ?? 20,
+    );
   }
 
   async findOne(id: string): Promise<ChannelRule> {
@@ -79,7 +110,9 @@ export class RulesService {
     });
 
     if (!channel) {
-      throw new BadRequestException(`Channel with id "${dto.channelId}" not found`);
+      throw new BadRequestException(
+        `Channel with id "${dto.channelId}" not found`,
+      );
     }
 
     // Check for duplicate rule
@@ -113,7 +146,9 @@ export class RulesService {
       },
     });
 
-    this.logger.log(`Created rule: ${rule.type}="${rule.value}" for channel ${channel.key}`);
+    this.logger.log(
+      `Created rule: ${rule.type}="${rule.value}" for channel ${channel.key}`,
+    );
     return rule;
   }
 

@@ -94,7 +94,8 @@ export class DeliveryProcessor extends WorkerHost {
 
       // Determine send method based on media availability
       const hasMediaGroup = payload.mediaUrls && payload.mediaUrls.length >= 2;
-      const hasSingleMedia = payload.mediaUrls?.length === 1 || payload.coverUrl;
+      const hasSingleMedia =
+        payload.mediaUrls?.length === 1 || payload.coverUrl;
 
       if (hasMediaGroup) {
         // Send media group (album) for 2+ images
@@ -223,9 +224,10 @@ export class DeliveryProcessor extends WorkerHost {
 
     if (payload.excerpt) {
       const remainingSpace = maxLength - caption.length - 100; // Reserve space for link and tags
-      const excerpt = payload.excerpt.length > remainingSpace
-        ? payload.excerpt.slice(0, remainingSpace - 3) + '...'
-        : payload.excerpt;
+      const excerpt =
+        payload.excerpt.length > remainingSpace
+          ? payload.excerpt.slice(0, remainingSpace - 3) + '...'
+          : payload.excerpt;
       caption += `${this.escapeHtml(excerpt)}\n\n`;
     }
 

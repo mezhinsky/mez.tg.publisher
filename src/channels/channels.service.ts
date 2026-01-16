@@ -1,4 +1,9 @@
-import { Injectable, NotFoundException, ConflictException, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ConflictException,
+  Logger,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateChannelDto } from './dto/create-channel.dto';
 import { UpdateChannelDto } from './dto/update-channel.dto';
@@ -12,7 +17,9 @@ export class ChannelsService {
 
   constructor(private readonly prisma: PrismaService) {}
 
-  async findAll(query: ChannelQueryDto): Promise<PaginatedResponseDto<Channel>> {
+  async findAll(
+    query: ChannelQueryDto,
+  ): Promise<PaginatedResponseDto<Channel>> {
     const where: Prisma.ChannelWhereInput = {};
 
     if (query.search) {
@@ -42,7 +49,12 @@ export class ChannelsService {
       this.prisma.channel.count({ where }),
     ]);
 
-    return new PaginatedResponseDto(channels, total, query.page ?? 1, query.limit ?? 20);
+    return new PaginatedResponseDto(
+      channels,
+      total,
+      query.page ?? 1,
+      query.limit ?? 20,
+    );
   }
 
   async findOne(id: string): Promise<Channel> {
@@ -75,7 +87,9 @@ export class ChannelsService {
     });
 
     if (existing) {
-      throw new ConflictException(`Channel with key "${dto.key}" already exists`);
+      throw new ConflictException(
+        `Channel with key "${dto.key}" already exists`,
+      );
     }
 
     const channel = await this.prisma.channel.create({

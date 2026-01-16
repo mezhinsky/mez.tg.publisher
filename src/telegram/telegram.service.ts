@@ -1,7 +1,6 @@
 import { Injectable, OnModuleInit, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Telegraf } from 'telegraf';
-import { Message } from 'telegraf/types';
 
 export interface SendMessageOptions {
   chatId: string;
@@ -40,14 +39,18 @@ export class TelegramService implements OnModuleInit {
   private readonly logger = new Logger(TelegramService.name);
   private bot: Telegraf;
   private isInitialized = false;
+  private strictInit = false;
 
   constructor(private readonly configService: ConfigService) {}
 
   async onModuleInit() {
     const token = this.configService.get<string>('telegram.botToken');
+    this.strictInit = this.configService.get<boolean>('telegram.strictInit') ?? false;
 
     if (!token) {
-      this.logger.warn('TELEGRAM_BOT_TOKEN not set. Telegram integration disabled.');
+      this.logger.warn(
+        'TELEGRAM_BOT_TOKEN not set. Telegram integration disabled.',
+      );
       return;
     }
 
@@ -59,7 +62,13 @@ export class TelegramService implements OnModuleInit {
       this.logger.log(`Telegram bot initialized: @${botInfo.username}`);
     } catch (error) {
       this.logger.error('Failed to initialize Telegram bot:', error);
-      throw error;
+      if (this.strictInit) {
+        throw error;
+      }
+      this.logger.warn(
+        'Telegram integration disabled (set TELEGRAM_STRICT_INIT=true to fail fast).',
+      );
+      this.isInitialized = false;
     }
   }
 
@@ -78,13 +87,21 @@ export class TelegramService implements OnModuleInit {
       throw new Error('Telegram bot not initialized');
     }
 
-    const { chatId, text, parseMode = 'HTML', disableWebPagePreview, disableNotification } = options;
+    const {
+      chatId,
+      text,
+      parseMode = 'HTML',
+      disableWebPagePreview,
+      disableNotification,
+    } = options;
 
     this.logger.debug(`Sending message to ${chatId}`);
 
     const result = await this.bot.telegram.sendMessage(chatId, text, {
       parse_mode: parseMode,
-      link_preview_options: disableWebPagePreview ? { is_disabled: true } : undefined,
+      link_preview_options: disableWebPagePreview
+        ? { is_disabled: true }
+        : undefined,
       disable_notification: disableNotification,
     });
 
@@ -121,7 +138,9 @@ export class TelegramService implements OnModuleInit {
    * Send a media group (album) with multiple photos
    * Caption is only shown on the first photo
    */
-  async sendMediaGroup(options: SendMediaGroupOptions): Promise<SendMediaGroupResult> {
+  async sendMediaGroup(
+    options: SendMediaGroupOptions,
+  ): Promise<SendMediaGroupResult> {
     if (!this.isReady()) {
       throw new Error('Telegram bot not initialized');
     }
@@ -133,10 +152,14 @@ export class TelegramService implements OnModuleInit {
     }
 
     if (mediaUrls.length > 10) {
-      throw new Error('mediaUrls cannot contain more than 10 items (Telegram limit)');
+      throw new Error(
+        'mediaUrls cannot contain more than 10 items (Telegram limit)',
+      );
     }
 
-    this.logger.debug(`Sending media group (${mediaUrls.length} photos) to ${chatId}`);
+    this.logger.debug(
+      `Sending media group (${mediaUrls.length} photos) to ${chatId}`,
+    );
 
     const media = mediaUrls.map((url, index) => ({
       type: 'photo' as const,
@@ -167,12 +190,21 @@ export class TelegramService implements OnModuleInit {
     }
 
     try {
-      await this.bot.telegram.editMessageText(chatId, messageId, undefined, text, {
-        parse_mode: parseMode,
-      });
+      await this.bot.telegram.editMessageText(
+        chatId,
+        messageId,
+        undefined,
+        text,
+        {
+          parse_mode: parseMode,
+        },
+      );
       return true;
     } catch (error) {
-      this.logger.error(`Failed to edit message ${messageId} in ${chatId}:`, error);
+      this.logger.error(
+        `Failed to edit message ${messageId} in ${chatId}:`,
+        error,
+      );
       throw error;
     }
   }
@@ -189,7 +221,10 @@ export class TelegramService implements OnModuleInit {
       await this.bot.telegram.deleteMessage(chatId, messageId);
       return true;
     } catch (error) {
-      this.logger.error(`Failed to delete message ${messageId} in ${chatId}:`, error);
+      this.logger.error(
+        `Failed to delete message ${messageId} in ${chatId}:`,
+        error,
+      );
       throw error;
     }
   }

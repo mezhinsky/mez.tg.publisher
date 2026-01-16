@@ -25,6 +25,9 @@ export class PostsService {
 
   async findAll(query: PostQueryDto): Promise<PaginatedResponseDto<Post>> {
     const where: Prisma.PostWhereInput = {};
+    const sortBy = query.sortBy ?? 'createdAt';
+    const order: Prisma.SortOrder = (query.order ?? 'desc') as Prisma.SortOrder;
+    let orderBy: Prisma.PostOrderByWithRelationInput = { createdAt: 'desc' };
 
     if (query.articleId) {
       where.articleId = query.articleId;
@@ -44,12 +47,28 @@ export class PostsService {
       }
     }
 
+    switch (sortBy) {
+      case 'updatedAt':
+        orderBy = { updatedAt: order };
+        break;
+      case 'articleId':
+        orderBy = { articleId: order };
+        break;
+      case 'status':
+        orderBy = { status: order };
+        break;
+      case 'createdAt':
+      default:
+        orderBy = { createdAt: order };
+        break;
+    }
+
     const [posts, total] = await Promise.all([
       this.prisma.post.findMany({
         where,
         skip: query.skip,
         take: query.take,
-        orderBy: { createdAt: 'desc' },
+        orderBy,
         include: {
           _count: {
             select: { deliveries: true },
@@ -59,7 +78,12 @@ export class PostsService {
       this.prisma.post.count({ where }),
     ]);
 
-    return new PaginatedResponseDto(posts, total, query.page ?? 1, query.limit ?? 20);
+    return new PaginatedResponseDto(
+      posts,
+      total,
+      query.page ?? 1,
+      query.limit ?? 20,
+    );
   }
 
   async findOne(id: string): Promise<Post> {
@@ -100,7 +124,9 @@ export class PostsService {
     });
 
     if (!post) {
-      throw new NotFoundException(`Post for articleId "${articleId}" not found`);
+      throw new NotFoundException(
+        `Post for articleId "${articleId}" not found`,
+      );
     }
 
     return post;

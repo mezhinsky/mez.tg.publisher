@@ -17,11 +17,9 @@ export interface GatewayUser {
 }
 
 // Extend Express Request
-declare global {
-  namespace Express {
-    interface Request {
-      user?: GatewayUser;
-    }
+declare module 'express-serve-static-core' {
+  interface Request {
+    user?: GatewayUser;
   }
 }
 

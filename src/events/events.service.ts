@@ -21,7 +21,9 @@ export class EventsService {
     private readonly queueService: QueueService,
   ) {}
 
-  async handleArticlePublished(dto: ArticlePublishedDto): Promise<HandleResult> {
+  async handleArticlePublished(
+    dto: ArticlePublishedDto,
+  ): Promise<HandleResult> {
     const payload: ArticlePayload = {
       title: dto.title,
       excerpt: dto.excerpt,
@@ -37,7 +39,9 @@ export class EventsService {
 
     // 2. Find matching channels based on tags
     const channels = await this.channelsService.findChannelsForTags(dto.tags);
-    this.logger.log(`Found ${channels.length} channels for tags: ${dto.tags.join(', ')}`);
+    this.logger.log(
+      `Found ${channels.length} channels for tags: ${dto.tags.join(', ')}`,
+    );
 
     // 3. Create deliveries and queue jobs
     let deliveriesCreated = 0;

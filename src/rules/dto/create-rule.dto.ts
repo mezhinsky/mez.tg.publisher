@@ -1,4 +1,11 @@
-import { IsString, IsBoolean, IsOptional, IsEnum, MinLength, MaxLength } from 'class-validator';
+import {
+  IsString,
+  IsBoolean,
+  IsOptional,
+  IsEnum,
+  MinLength,
+  MaxLength,
+} from 'class-validator';
 import { ChannelRuleType } from '../../../generated/prisma';
 
 export class CreateRuleDto {
