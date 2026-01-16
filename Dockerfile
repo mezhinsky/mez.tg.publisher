@@ -4,7 +4,7 @@ WORKDIR /app
 
 # Install dependencies (both prod and dev for build)
 COPY package*.json ./
-RUN npm install --legacy-peer-deps
+RUN npm ci
 
 # Copy Prisma schema
 COPY prisma ./prisma
@@ -21,8 +21,19 @@ RUN npx prisma generate
 # Copy the rest of the code
 COPY . .
 
-# Build NestJS - fail if dist/main.js not created
-RUN npm run build && test -f /app/dist/main.js || (echo "BUILD FAILED: dist/main.js not found" && exit 1)
+# Debug: show what files we have
+RUN ls -la /app/src/
+
+# Build NestJS with verbose output
+RUN npx nest build --debug 2>&1 || true
+RUN ls -la /app/ && ls -la /app/dist/ 2>/dev/null || echo "No dist folder"
+
+# Try direct tsc build
+RUN npx tsc -p tsconfig.build.json 2>&1 || true
+RUN ls -la /app/dist/ 2>/dev/null || echo "Still no dist folder"
+
+# Final check
+RUN test -f /app/dist/main.js || (echo "BUILD FAILED" && exit 1)
 
 EXPOSE 3002
 
