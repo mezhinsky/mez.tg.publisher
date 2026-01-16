@@ -23,6 +23,9 @@ export class DeliveriesService {
     query: DeliveryQueryDto,
   ): Promise<PaginatedResponseDto<PostDelivery>> {
     const where: Prisma.PostDeliveryWhereInput = {};
+    const sortBy = query.sortBy ?? 'createdAt';
+    const order: Prisma.SortOrder = (query.order ?? 'desc') as Prisma.SortOrder;
+    let orderBy: Prisma.PostDeliveryOrderByWithRelationInput = { createdAt: 'desc' };
 
     if (query.postId) {
       where.postId = query.postId;
@@ -36,12 +39,31 @@ export class DeliveriesService {
       where.status = query.status;
     }
 
+    switch (sortBy) {
+      case 'updatedAt':
+        orderBy = { updatedAt: order };
+        break;
+      case 'status':
+        orderBy = { status: order };
+        break;
+      case 'attempts':
+        orderBy = { attempts: order };
+        break;
+      case 'sentAt':
+        orderBy = { sentAt: order };
+        break;
+      case 'createdAt':
+      default:
+        orderBy = { createdAt: order };
+        break;
+    }
+
     const [deliveries, total] = await Promise.all([
       this.prisma.postDelivery.findMany({
         where,
         skip: query.skip,
         take: query.take,
-        orderBy: { createdAt: 'desc' },
+        orderBy,
         include: {
           post: {
             select: { id: true, articleId: true, status: true },
