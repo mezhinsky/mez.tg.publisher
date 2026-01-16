@@ -21,8 +21,8 @@ RUN npx prisma generate
 # Copy the rest of the code
 COPY . .
 
-# Build NestJS
-RUN npm run build
+# Build NestJS - fail if dist/main.js not created
+RUN npm run build && test -f /app/dist/main.js || (echo "BUILD FAILED: dist/main.js not found" && exit 1)
 
 EXPOSE 3002
 
