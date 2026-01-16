@@ -8,6 +8,8 @@ RUN npm install --legacy-peer-deps
 
 # Copy Prisma schema
 COPY prisma ./prisma
+COPY prisma.config.ts ./prisma.config.ts
+
 
 # Fake DATABASE_URL only for build stage
 ARG DATABASE_URL="postgres://user:password@localhost:5432/dummy"
