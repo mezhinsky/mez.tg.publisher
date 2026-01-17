@@ -16,11 +16,46 @@ export class QueueService {
    * Add a delivery job to the queue
    */
   async addDeliveryJob(deliveryId: string, delay?: number): Promise<void> {
+    const jobId = `delivery-${deliveryId}`;
+
+    // BullMQ deduplicates by jobId: if a failed/completed job is still stored,
+    // Queue.add() won't enqueue a new one. For "retry" flows we want to ensure
+    // there is an actual runnable job in the queue.
+    const existing = await this.deliveryQueue.getJob(jobId);
+    if (existing) {
+      const state = await existing.getState();
+
+      if (state === 'failed') {
+        await existing.retry();
+        this.logger.debug(`Retried existing delivery job: ${deliveryId}`);
+        return;
+      }
+
+      if (state === 'delayed') {
+        await existing.promote();
+        this.logger.debug(`Promoted existing delivery job: ${deliveryId}`);
+        return;
+      }
+
+      if (state === 'waiting' || state === 'active') {
+        this.logger.debug(`Delivery job already queued (${state}): ${deliveryId}`);
+        return;
+      }
+
+      // completed/paused/etc: remove and enqueue a fresh job
+      try {
+        await existing.remove();
+      } catch {
+        // If removal fails (e.g. lock), fall back to leaving it as-is.
+        this.logger.warn(`Failed to remove existing job (${state}): ${deliveryId}`);
+      }
+    }
+
     await this.deliveryQueue.add(
       'send',
       { deliveryId },
       {
-        jobId: `delivery-${deliveryId}`,
+        jobId,
         delay,
         removeOnComplete: 100, // Keep last 100 completed jobs
         removeOnFail: 1000, // Keep last 1000 failed jobs

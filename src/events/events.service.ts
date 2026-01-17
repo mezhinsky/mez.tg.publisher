@@ -71,6 +71,9 @@ export class EventsService {
       `Article ${dto.articleId}: created ${deliveriesCreated} new deliveries`,
     );
 
+    // Ensure post status reflects reality (incl. "0 deliveries" -> SENT).
+    await this.postsService.updatePostStatus(post.id);
+
     return {
       postId: post.id,
       deliveriesCreated,

@@ -191,11 +191,16 @@ export class PostsService {
       retriedCount++;
     }
 
-    // Update post status
-    await this.prisma.post.update({
-      where: { id },
-      data: { status: PostStatus.PENDING },
-    });
+    if (retriedCount > 0) {
+      // If we actually retried something, force post back to PENDING.
+      await this.prisma.post.update({
+        where: { id },
+        data: { status: PostStatus.PENDING },
+      });
+    } else {
+      // No FAILED deliveries to retry; keep status consistent with actual deliveries.
+      await this.updatePostStatus(id);
+    }
 
     this.logger.log(`Retried ${retriedCount} deliveries for post ${id}`);
     return { retriedCount };
@@ -210,9 +215,10 @@ export class PostsService {
     });
 
     if (deliveries.length === 0) {
+      // Post processed, but there are no target deliveries (e.g. no matching channels/rules).
       return this.prisma.post.update({
         where: { id: postId },
-        data: { status: PostStatus.PENDING },
+        data: { status: PostStatus.SENT },
       });
     }
 
