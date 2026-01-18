@@ -4,6 +4,7 @@ import { PostQueryDto } from './dto/post-query.dto';
 import { PaginatedResponseDto } from '../common/dto/paginated-response.dto';
 import { DeliveryStatus, Post, PostStatus, Prisma } from '../../generated/prisma';
 import { QueueService } from '../queue/queue.service';
+import { TelegramService } from '../telegram/telegram.service';
 
 export interface ArticlePayload {
   title: string;
@@ -21,6 +22,7 @@ export class PostsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly queueService: QueueService,
+    private readonly telegramService: TelegramService,
   ) {}
 
   async findAll(query: PostQueryDto): Promise<PaginatedResponseDto<Post>> {
@@ -229,7 +231,9 @@ export class PostsService {
    */
   async updatePostPayload(
     id: string,
-    patch: Partial<Pick<ArticlePayload, 'title' | 'excerpt' | 'url' | 'tags'>>,
+    patch: Partial<
+      Pick<ArticlePayload, 'title' | 'excerpt' | 'url' | 'tags' | 'coverUrl'>
+    >,
     options?: { createEditDeliveries?: boolean },
   ): Promise<{ post: Post; editDeliveriesCreated: number }> {
     const existingPost = await this.prisma.post.findUnique({ where: { id } });
@@ -248,6 +252,11 @@ export class PostsService {
       nextPayload.url = patch.url as unknown as Prisma.JsonValue;
     if (patch.tags !== undefined)
       nextPayload.tags = patch.tags as unknown as Prisma.JsonValue;
+    if (patch.coverUrl !== undefined) {
+      // Single-photo only: store it in coverUrl and clear any old mediaUrls arrays.
+      nextPayload.coverUrl = patch.coverUrl as unknown as Prisma.JsonValue;
+      nextPayload.mediaUrls = undefined as unknown as Prisma.JsonValue;
+    }
 
     const existingPayloadJson = JSON.stringify(existingPost.payload);
     const nextPayloadJson = JSON.stringify(nextPayload);
@@ -406,5 +415,83 @@ export class PostsService {
 
   private hashPayload(payload: unknown): string {
     return Buffer.from(JSON.stringify(payload)).toString('base64').slice(0, 32);
+  }
+
+  async deletePost(
+    id: string,
+  ): Promise<{
+    success: true;
+    deletedPostId: string;
+    deliveriesDeleted: number;
+    telegramMessagesDeleted: number;
+    telegramSkipped: boolean;
+  }> {
+    const post = await this.prisma.post.findUnique({
+      where: { id },
+      include: {
+        deliveries: {
+          include: {
+            channel: { select: { chatId: true } },
+          },
+        },
+      },
+    });
+
+    if (!post) {
+      throw new NotFoundException(`Post with id "${id}" not found`);
+    }
+
+    const deliveriesDeleted = post.deliveries.length;
+
+    let telegramMessagesDeleted = 0;
+    let telegramSkipped = false;
+
+    if (!this.telegramService.isReady()) {
+      telegramSkipped = true;
+    } else {
+      const seen = new Set<string>();
+      for (const delivery of post.deliveries) {
+        const chatId = delivery.channel?.chatId;
+        const ids = delivery.telegramMessageId
+          ? delivery.telegramMessageId
+              .split(',')
+              .map((s) => s.trim())
+              .filter(Boolean)
+          : [];
+
+        if (!chatId || ids.length === 0) continue;
+
+        for (const rawId of ids) {
+          const key = `${chatId}:${rawId}`;
+          if (seen.has(key)) continue;
+          seen.add(key);
+
+          const messageId = parseInt(rawId, 10);
+          if (!Number.isFinite(messageId)) continue;
+
+          try {
+            await this.telegramService.deleteMessage(chatId, messageId);
+            telegramMessagesDeleted++;
+          } catch {
+            // Ignore deletion errors: message may already be deleted / too old / no rights.
+          }
+        }
+      }
+    }
+
+    // Deleting the post cascades deliveries (onDelete: Cascade).
+    await this.prisma.post.delete({ where: { id } });
+
+    this.logger.log(
+      `Deleted post ${id} (deliveries: ${deliveriesDeleted}, telegramDeleted: ${telegramMessagesDeleted}, telegramSkipped: ${telegramSkipped})`,
+    );
+
+    return {
+      success: true,
+      deletedPostId: id,
+      deliveriesDeleted,
+      telegramMessagesDeleted,
+      telegramSkipped,
+    };
   }
 }

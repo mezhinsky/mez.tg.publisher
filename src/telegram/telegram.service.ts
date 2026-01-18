@@ -242,6 +242,61 @@ export class TelegramService implements OnModuleInit {
     };
   }
 
+  /**
+   * Replace a message's photo (and caption).
+   *
+   * Works for photo messages; Telegram may also allow adding media to text messages.
+   * If Telegram can't fetch the URL (e.g. MinIO behind auth or localhost), we fetch and upload bytes.
+   */
+  async editMessagePhoto(
+    chatId: string,
+    messageId: number,
+    photoUrl: string,
+    caption?: string,
+    parseMode: 'HTML' | 'Markdown' | 'MarkdownV2' = 'HTML',
+  ): Promise<boolean> {
+    if (!this.isReady()) {
+      throw new Error('Telegram bot not initialized');
+    }
+
+    const makeMedia = (media: string | ReturnType<typeof Input.fromBuffer>) =>
+      ({
+        type: 'photo',
+        media,
+        ...(caption ? { caption, parse_mode: parseMode } : { parse_mode: parseMode }),
+      }) as const;
+
+    const direct = this.shouldUploadInsteadOfUrl(photoUrl) ? null : photoUrl;
+
+    if (direct) {
+      try {
+        await this.bot.telegram.editMessageMedia(
+          chatId,
+          messageId,
+          undefined,
+          makeMedia(direct) as any,
+        );
+        return true;
+      } catch (error) {
+        if (!this.isTelegramRemoteFetchError(error)) {
+          throw error;
+        }
+        this.logger.warn(
+          `Telegram failed to fetch photo by URL during edit, falling back to upload: ${photoUrl}`,
+        );
+      }
+    }
+
+    const { buffer, filename } = await this.fetchImage(photoUrl);
+    await this.bot.telegram.editMessageMedia(
+      chatId,
+      messageId,
+      undefined,
+      makeMedia(Input.fromBuffer(buffer, filename)) as any,
+    );
+    return true;
+  }
+
   private isTelegramRemoteFetchError(error: unknown): boolean {
     const message = error instanceof Error ? error.message : String(error);
     return (

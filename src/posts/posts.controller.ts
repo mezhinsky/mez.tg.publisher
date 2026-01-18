@@ -3,6 +3,7 @@ import {
   Get,
   Post,
   Patch,
+  Delete,
   Param,
   Query,
   HttpCode,
@@ -44,5 +45,10 @@ export class PostsController {
     return this.postsService.updatePostPayload(id, fields, {
       createEditDeliveries,
     });
+  }
+
+  @Delete(':id')
+  remove(@Param('id') id: string) {
+    return this.postsService.deletePost(id);
   }
 }

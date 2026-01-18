@@ -24,12 +24,14 @@ export class EventsService {
   async handleArticlePublished(
     dto: ArticlePublishedDto,
   ): Promise<HandleResult> {
+    const firstMediaUrl = dto.mediaUrls?.[0];
     const payload: ArticlePayload = {
       title: dto.title,
       excerpt: dto.excerpt,
       url: dto.url,
-      coverUrl: dto.coverUrl,
-      mediaUrls: dto.mediaUrls,
+      coverUrl: dto.coverUrl ?? firstMediaUrl,
+      // Single-photo only: keep the payload stable by using coverUrl.
+      mediaUrls: undefined,
       tags: dto.tags,
     };
 
