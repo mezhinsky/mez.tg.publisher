@@ -155,6 +155,7 @@ exports.Prisma.PostDeliveryScalarFieldEnum = {
   id: 'id',
   postId: 'postId',
   channelId: 'channelId',
+  revision: 'revision',
   status: 'status',
   telegramMessageId: 'telegramMessageId',
   attempts: 'attempts',

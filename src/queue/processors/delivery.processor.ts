@@ -91,49 +91,124 @@ export class DeliveryProcessor extends WorkerHost {
     try {
       const payload = delivery.post.payload as unknown as ArticlePayload;
       let telegramMessageId: string;
-
-      // Determine send method based on media availability
-      const hasMediaGroup = payload.mediaUrls && payload.mediaUrls.length >= 2;
-      const hasSingleMedia =
-        payload.mediaUrls?.length === 1 || payload.coverUrl;
-
-      if (hasMediaGroup) {
-        // Send media group (album) for 2+ images
-        const caption = this.formatCaption(payload);
-        const result = await this.telegramService.sendMediaGroup({
-          chatId: delivery.channel.chatId,
-          mediaUrls: payload.mediaUrls!,
-          caption,
-          parseMode: 'HTML',
-        });
-        // Store first message ID (the one with caption)
-        telegramMessageId = result.messageIds.join(',');
-        this.logger.debug(
-          `Sent media group (${payload.mediaUrls!.length} photos) to ${delivery.channel.key}`,
+      const isMessageNotModified = (error: unknown): boolean => {
+        const msg = error instanceof Error ? error.message : String(error);
+        return (
+          msg.includes('message is not modified') ||
+          msg.includes('MESSAGE_NOT_MODIFIED')
         );
-      } else if (hasSingleMedia) {
-        // Send single photo
-        const photoUrl = payload.mediaUrls?.[0] || payload.coverUrl!;
-        const caption = this.formatCaption(payload);
-        const result = await this.telegramService.sendPhoto({
-          chatId: delivery.channel.chatId,
-          photoUrl,
-          caption,
-          parseMode: 'HTML',
-        });
-        telegramMessageId = String(result.messageId);
-        this.logger.debug(`Sent photo message to ${delivery.channel.key}`);
+      };
+
+      if (delivery.revision > 0) {
+        if (!delivery.telegramMessageId) {
+          throw new Error(
+            'telegramMessageId is required to edit an existing Telegram message',
+          );
+        }
+
+        telegramMessageId = delivery.telegramMessageId;
+        const firstMessageId = parseInt(telegramMessageId.split(',')[0], 10);
+
+        if (telegramMessageId.includes(',')) {
+          // Media groups can only reliably update the caption of the first message.
+          const caption = this.formatCaption(payload);
+          try {
+            await this.telegramService.editMessageCaption(
+              delivery.channel.chatId,
+              firstMessageId,
+              caption,
+              'HTML',
+            );
+          } catch (error) {
+            if (!isMessageNotModified(error)) {
+              throw error;
+            }
+          }
+          this.logger.debug(
+            `Edited media-group caption in ${delivery.channel.key} (msgId: ${firstMessageId})`,
+          );
+        } else {
+          // Try editing as text message first; if it fails (e.g. original is a photo), fallback to caption.
+          const message = this.formatMessage(payload);
+          try {
+            await this.telegramService.editMessage(
+              delivery.channel.chatId,
+              firstMessageId,
+              message,
+              'HTML',
+            );
+            this.logger.debug(
+              `Edited message text in ${delivery.channel.key} (msgId: ${firstMessageId})`,
+            );
+          } catch (error) {
+            if (isMessageNotModified(error)) {
+              this.logger.debug(
+                `Message not modified in ${delivery.channel.key} (msgId: ${firstMessageId})`,
+              );
+            } else {
+              const caption = this.formatCaption(payload);
+              try {
+                await this.telegramService.editMessageCaption(
+                  delivery.channel.chatId,
+                  firstMessageId,
+                  caption,
+                  'HTML',
+                );
+              } catch (error) {
+                if (!isMessageNotModified(error)) {
+                  throw error;
+                }
+              }
+              this.logger.debug(
+                `Edited message caption in ${delivery.channel.key} (msgId: ${firstMessageId})`,
+              );
+            }
+          }
+        }
       } else {
-        // Send text message (no media)
-        const message = this.formatMessage(payload);
-        const result = await this.telegramService.sendMessage({
-          chatId: delivery.channel.chatId,
-          text: message,
-          parseMode: 'HTML',
-          disableWebPagePreview: false,
-        });
-        telegramMessageId = String(result.messageId);
-        this.logger.debug(`Sent text message to ${delivery.channel.key}`);
+        // Determine send method based on media availability
+        const hasMediaGroup = payload.mediaUrls && payload.mediaUrls.length >= 2;
+        const hasSingleMedia =
+          payload.mediaUrls?.length === 1 || payload.coverUrl;
+
+        if (hasMediaGroup) {
+          // Send media group (album) for 2+ images
+          const caption = this.formatCaption(payload);
+          const result = await this.telegramService.sendMediaGroup({
+            chatId: delivery.channel.chatId,
+            mediaUrls: payload.mediaUrls!,
+            caption,
+            parseMode: 'HTML',
+          });
+          // Store first message ID (the one with caption)
+          telegramMessageId = result.messageIds.join(',');
+          this.logger.debug(
+            `Sent media group (${payload.mediaUrls!.length} photos) to ${delivery.channel.key}`,
+          );
+        } else if (hasSingleMedia) {
+          // Send single photo
+          const photoUrl = payload.mediaUrls?.[0] || payload.coverUrl!;
+          const caption = this.formatCaption(payload);
+          const result = await this.telegramService.sendPhoto({
+            chatId: delivery.channel.chatId,
+            photoUrl,
+            caption,
+            parseMode: 'HTML',
+          });
+          telegramMessageId = String(result.messageId);
+          this.logger.debug(`Sent photo message to ${delivery.channel.key}`);
+        } else {
+          // Send text message (no media)
+          const message = this.formatMessage(payload);
+          const result = await this.telegramService.sendMessage({
+            chatId: delivery.channel.chatId,
+            text: message,
+            parseMode: 'HTML',
+            disableWebPagePreview: false,
+          });
+          telegramMessageId = String(result.messageId);
+          this.logger.debug(`Sent text message to ${delivery.channel.key}`);
+        }
       }
 
       // Extract first message ID for URL building
@@ -146,8 +221,8 @@ export class DeliveryProcessor extends WorkerHost {
         `Delivery sent: ${deliveryId} -> ${delivery.channel.key} (msgId: ${telegramMessageId})`,
       );
 
-      // Emit event for main channel delivery
-      if (delivery.channel.key === this.mainChannelKey) {
+      // Emit event only for the initial send (revision 0) to avoid duplicate "published" events on edits.
+      if (delivery.revision === 0 && delivery.channel.key === this.mainChannelKey) {
         const telegramUrl = delivery.channel.username
           ? this.telegramService.buildMessageUrl(
               delivery.channel.username,

@@ -210,6 +210,37 @@ export class TelegramService implements OnModuleInit {
   }
 
   /**
+   * Edit a message's caption (e.g. photo or media-group first item)
+   */
+  async editMessageCaption(
+    chatId: string,
+    messageId: number,
+    caption: string,
+    parseMode: 'HTML' | 'Markdown' | 'MarkdownV2' = 'HTML',
+  ): Promise<boolean> {
+    if (!this.isReady()) {
+      throw new Error('Telegram bot not initialized');
+    }
+
+    try {
+      await this.bot.telegram.editMessageCaption(
+        chatId,
+        messageId,
+        undefined,
+        caption,
+        { parse_mode: parseMode },
+      );
+      return true;
+    } catch (error) {
+      this.logger.error(
+        `Failed to edit message caption ${messageId} in ${chatId}:`,
+        error,
+      );
+      throw error;
+    }
+  }
+
+  /**
    * Delete a message
    */
   async deleteMessage(chatId: string, messageId: number): Promise<boolean> {

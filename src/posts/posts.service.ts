@@ -2,7 +2,7 @@ import { Injectable, NotFoundException, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { PostQueryDto } from './dto/post-query.dto';
 import { PaginatedResponseDto } from '../common/dto/paginated-response.dto';
-import { Post, PostStatus, Prisma } from '../../generated/prisma';
+import { DeliveryStatus, Post, PostStatus, Prisma } from '../../generated/prisma';
 import { QueueService } from '../queue/queue.service';
 
 export interface ArticlePayload {
@@ -174,8 +174,16 @@ export class PostsService {
       throw new NotFoundException(`Post with id "${id}" not found`);
     }
 
-    let retriedCount = 0;
+    const latestFailedByChannel = new Map<string, (typeof post.deliveries)[number]>();
     for (const delivery of post.deliveries) {
+      const existing = latestFailedByChannel.get(delivery.channelId);
+      if (!existing || delivery.revision > existing.revision) {
+        latestFailedByChannel.set(delivery.channelId, delivery);
+      }
+    }
+
+    let retriedCount = 0;
+    for (const delivery of latestFailedByChannel.values()) {
       // Reset delivery status
       await this.prisma.postDelivery.update({
         where: { id: delivery.id },
@@ -207,11 +215,120 @@ export class PostsService {
   }
 
   /**
+   * Update post payload and (optionally) enqueue edit deliveries for already-sent channels.
+   *
+   * This creates new PostDelivery rows (revision + 1) that target the same Telegram message(s)
+   * and apply the latest payload via Telegram edit APIs.
+   */
+  async updatePostPayload(
+    id: string,
+    payload: Prisma.JsonObject,
+    options?: { createEditDeliveries?: boolean },
+  ): Promise<{ post: Post; editDeliveriesCreated: number }> {
+    const existingPost = await this.prisma.post.findUnique({ where: { id } });
+    if (!existingPost) {
+      throw new NotFoundException(`Post with id "${id}" not found`);
+    }
+
+    const payloadHash = this.hashPayload(payload);
+    const post = await this.prisma.post.update({
+      where: { id },
+      data: {
+        payload,
+        payloadHash,
+      },
+    });
+
+    const createEditDeliveries = options?.createEditDeliveries ?? true;
+    if (!createEditDeliveries) {
+      return { post, editDeliveriesCreated: 0 };
+    }
+
+    const deliveries = await this.prisma.postDelivery.findMany({
+      where: { postId: id },
+      select: {
+        id: true,
+        channelId: true,
+        revision: true,
+        status: true,
+        telegramMessageId: true,
+      },
+    });
+
+    const latestByChannel = new Map<
+      string,
+      {
+        channelId: string;
+        revision: number;
+        status: DeliveryStatus;
+        telegramMessageId: string | null;
+      }
+    >();
+
+    for (const delivery of deliveries) {
+      const existing = latestByChannel.get(delivery.channelId);
+      if (!existing || delivery.revision > existing.revision) {
+        latestByChannel.set(delivery.channelId, {
+          channelId: delivery.channelId,
+          revision: delivery.revision,
+          status: delivery.status as DeliveryStatus,
+          telegramMessageId: delivery.telegramMessageId,
+        });
+      }
+    }
+
+    const createdDeliveryIds: string[] = [];
+
+    for (const latest of latestByChannel.values()) {
+      // If the newest delivery is already in-flight, just let it pick up the new payload.
+      if (latest.status === DeliveryStatus.PENDING) {
+        continue;
+      }
+
+      // If we never successfully sent (no Telegram message id), we can't edit.
+      if (!latest.telegramMessageId) {
+        continue;
+      }
+
+      const created = await this.prisma.postDelivery.create({
+        data: {
+          postId: id,
+          channelId: latest.channelId,
+          revision: latest.revision + 1,
+          status: DeliveryStatus.PENDING,
+          telegramMessageId: latest.telegramMessageId,
+          attempts: 0,
+          lastError: null,
+          sentAt: null,
+        },
+        select: { id: true },
+      });
+
+      createdDeliveryIds.push(created.id);
+    }
+
+    await Promise.all(
+      createdDeliveryIds.map((deliveryId) =>
+        this.queueService.addDeliveryJob(deliveryId),
+      ),
+    );
+
+    await this.updatePostStatus(id);
+
+    this.logger.log(
+      `Updated post payload: ${id}; created ${createdDeliveryIds.length} edit deliveries`,
+    );
+
+    return { post, editDeliveriesCreated: createdDeliveryIds.length };
+  }
+
+  /**
    * Update post status based on delivery statuses
    */
   async updatePostStatus(postId: string): Promise<Post> {
     const deliveries = await this.prisma.postDelivery.findMany({
       where: { postId },
+      select: { channelId: true, revision: true, status: true },
     });
 
     if (deliveries.length === 0) {
@@ -222,9 +339,28 @@ export class PostsService {
       });
     }
 
-    const allSent = deliveries.every((d) => d.status === 'SENT');
-    const allFailed = deliveries.every((d) => d.status === 'FAILED');
-    const anyPending = deliveries.some((d) => d.status === 'PENDING');
+    // Treat deliveries as a timeline per channel. Only the latest revision per channel affects the Post status.
+    const latestByChannel = new Map<
+      string,
+      { revision: number; status: DeliveryStatus }
+    >();
+    for (const delivery of deliveries) {
+      const existing = latestByChannel.get(delivery.channelId);
+      if (!existing || delivery.revision > existing.revision) {
+        latestByChannel.set(delivery.channelId, {
+          revision: delivery.revision,
+          status: delivery.status as DeliveryStatus,
+        });
+      }
+    }
+
+    const latestStatuses = Array.from(latestByChannel.values()).map(
+      (d) => d.status,
+    );
+
+    const allSent = latestStatuses.every((s) => s === 'SENT');
+    const allFailed = latestStatuses.every((s) => s === 'FAILED');
+    const anyPending = latestStatuses.some((s) => s === 'PENDING');
 
     let status: PostStatus;
     if (anyPending) {
@@ -243,7 +379,7 @@ export class PostsService {
     });
   }
 
-  private hashPayload(payload: ArticlePayload): string {
+  private hashPayload(payload: unknown): string {
     return Buffer.from(JSON.stringify(payload)).toString('base64').slice(0, 32);
   }
 }

@@ -4577,10 +4577,12 @@ export namespace Prisma {
   }
 
   export type PostDeliveryAvgAggregateOutputType = {
+    revision: number | null
     attempts: number | null
   }
 
   export type PostDeliverySumAggregateOutputType = {
+    revision: number | null
     attempts: number | null
   }
 
@@ -4588,6 +4590,7 @@ export namespace Prisma {
     id: string | null
     postId: string | null
     channelId: string | null
+    revision: number | null
     status: $Enums.DeliveryStatus | null
     telegramMessageId: string | null
     attempts: number | null
@@ -4601,6 +4604,7 @@ export namespace Prisma {
     id: string | null
     postId: string | null
     channelId: string | null
+    revision: number | null
     status: $Enums.DeliveryStatus | null
     telegramMessageId: string | null
     attempts: number | null
@@ -4614,6 +4618,7 @@ export namespace Prisma {
     id: number
     postId: number
     channelId: number
+    revision: number
     status: number
     telegramMessageId: number
     attempts: number
@@ -4626,10 +4631,12 @@ export namespace Prisma {
 
 
   export type PostDeliveryAvgAggregateInputType = {
+    revision?: true
     attempts?: true
   }
 
   export type PostDeliverySumAggregateInputType = {
+    revision?: true
     attempts?: true
   }
 
@@ -4637,6 +4644,7 @@ export namespace Prisma {
     id?: true
     postId?: true
     channelId?: true
+    revision?: true
     status?: true
     telegramMessageId?: true
     attempts?: true
@@ -4650,6 +4658,7 @@ export namespace Prisma {
     id?: true
     postId?: true
     channelId?: true
+    revision?: true
     status?: true
     telegramMessageId?: true
     attempts?: true
@@ -4663,6 +4672,7 @@ export namespace Prisma {
     id?: true
     postId?: true
     channelId?: true
+    revision?: true
     status?: true
     telegramMessageId?: true
     attempts?: true
@@ -4763,6 +4773,7 @@ export namespace Prisma {
     id: string
     postId: string
     channelId: string
+    revision: number
     status: $Enums.DeliveryStatus
     telegramMessageId: string | null
     attempts: number
@@ -4795,6 +4806,7 @@ export namespace Prisma {
     id?: boolean
     postId?: boolean
     channelId?: boolean
+    revision?: boolean
     status?: boolean
     telegramMessageId?: boolean
     attempts?: boolean
@@ -4810,6 +4822,7 @@ export namespace Prisma {
     id?: boolean
     postId?: boolean
     channelId?: boolean
+    revision?: boolean
     status?: boolean
     telegramMessageId?: boolean
     attempts?: boolean
@@ -4825,6 +4838,7 @@ export namespace Prisma {
     id?: boolean
     postId?: boolean
     channelId?: boolean
+    revision?: boolean
     status?: boolean
     telegramMessageId?: boolean
     attempts?: boolean
@@ -4840,6 +4854,7 @@ export namespace Prisma {
     id?: boolean
     postId?: boolean
     channelId?: boolean
+    revision?: boolean
     status?: boolean
     telegramMessageId?: boolean
     attempts?: boolean
@@ -4849,7 +4864,7 @@ export namespace Prisma {
     updatedAt?: boolean
   }
 
-  export type PostDeliveryOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "postId" | "channelId" | "status" | "telegramMessageId" | "attempts" | "lastError" | "sentAt" | "createdAt" | "updatedAt", ExtArgs["result"]["postDelivery"]>
+  export type PostDeliveryOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "postId" | "channelId" | "revision" | "status" | "telegramMessageId" | "attempts" | "lastError" | "sentAt" | "createdAt" | "updatedAt", ExtArgs["result"]["postDelivery"]>
   export type PostDeliveryInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     post?: boolean | PostDefaultArgs<ExtArgs>
     channel?: boolean | ChannelDefaultArgs<ExtArgs>
@@ -4873,6 +4888,7 @@ export namespace Prisma {
       id: string
       postId: string
       channelId: string
+      revision: number
       status: $Enums.DeliveryStatus
       telegramMessageId: string | null
       attempts: number
@@ -5308,6 +5324,7 @@ export namespace Prisma {
     readonly id: FieldRef<"PostDelivery", 'String'>
     readonly postId: FieldRef<"PostDelivery", 'String'>
     readonly channelId: FieldRef<"PostDelivery", 'String'>
+    readonly revision: FieldRef<"PostDelivery", 'Int'>
     readonly status: FieldRef<"PostDelivery", 'DeliveryStatus'>
     readonly telegramMessageId: FieldRef<"PostDelivery", 'String'>
     readonly attempts: FieldRef<"PostDelivery", 'Int'>
@@ -5787,6 +5804,7 @@ export namespace Prisma {
     id: 'id',
     postId: 'postId',
     channelId: 'channelId',
+    revision: 'revision',
     status: 'status',
     telegramMessageId: 'telegramMessageId',
     attempts: 'attempts',
@@ -5922,20 +5940,6 @@ export namespace Prisma {
 
 
   /**
-   * Reference to a field of type 'DeliveryStatus'
-   */
-  export type EnumDeliveryStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'DeliveryStatus'>
-    
-
-
-  /**
-   * Reference to a field of type 'DeliveryStatus[]'
-   */
-  export type ListEnumDeliveryStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'DeliveryStatus[]'>
-    
-
-
-  /**
    * Reference to a field of type 'Int'
    */
   export type IntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Int'>
@@ -5946,6 +5950,20 @@ export namespace Prisma {
    * Reference to a field of type 'Int[]'
    */
   export type ListIntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Int[]'>
+    
+
+
+  /**
+   * Reference to a field of type 'DeliveryStatus'
+   */
+  export type EnumDeliveryStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'DeliveryStatus'>
+    
+
+
+  /**
+   * Reference to a field of type 'DeliveryStatus[]'
+   */
+  export type ListEnumDeliveryStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'DeliveryStatus[]'>
     
 
 
@@ -6177,6 +6195,7 @@ export namespace Prisma {
     id?: StringFilter<"PostDelivery"> | string
     postId?: StringFilter<"PostDelivery"> | string
     channelId?: StringFilter<"PostDelivery"> | string
+    revision?: IntFilter<"PostDelivery"> | number
     status?: EnumDeliveryStatusFilter<"PostDelivery"> | $Enums.DeliveryStatus
     telegramMessageId?: StringNullableFilter<"PostDelivery"> | string | null
     attempts?: IntFilter<"PostDelivery"> | number
@@ -6192,6 +6211,7 @@ export namespace Prisma {
     id?: SortOrder
     postId?: SortOrder
     channelId?: SortOrder
+    revision?: SortOrder
     status?: SortOrder
     telegramMessageId?: SortOrderInput | SortOrder
     attempts?: SortOrder
@@ -6205,12 +6225,13 @@ export namespace Prisma {
 
   export type PostDeliveryWhereUniqueInput = Prisma.AtLeast<{
     id?: string
-    postId_channelId?: PostDeliveryPostIdChannelIdCompoundUniqueInput
+    postId_channelId_revision?: PostDeliveryPostIdChannelIdRevisionCompoundUniqueInput
     AND?: PostDeliveryWhereInput | PostDeliveryWhereInput[]
     OR?: PostDeliveryWhereInput[]
     NOT?: PostDeliveryWhereInput | PostDeliveryWhereInput[]
     postId?: StringFilter<"PostDelivery"> | string
     channelId?: StringFilter<"PostDelivery"> | string
+    revision?: IntFilter<"PostDelivery"> | number
     status?: EnumDeliveryStatusFilter<"PostDelivery"> | $Enums.DeliveryStatus
     telegramMessageId?: StringNullableFilter<"PostDelivery"> | string | null
     attempts?: IntFilter<"PostDelivery"> | number
@@ -6220,12 +6241,13 @@ export namespace Prisma {
     updatedAt?: DateTimeFilter<"PostDelivery"> | Date | string
     post?: XOR<PostScalarRelationFilter, PostWhereInput>
     channel?: XOR<ChannelScalarRelationFilter, ChannelWhereInput>
-  }, "id" | "postId_channelId">
+  }, "id" | "postId_channelId_revision">
 
   export type PostDeliveryOrderByWithAggregationInput = {
     id?: SortOrder
     postId?: SortOrder
     channelId?: SortOrder
+    revision?: SortOrder
     status?: SortOrder
     telegramMessageId?: SortOrderInput | SortOrder
     attempts?: SortOrder
@@ -6247,6 +6269,7 @@ export namespace Prisma {
     id?: StringWithAggregatesFilter<"PostDelivery"> | string
     postId?: StringWithAggregatesFilter<"PostDelivery"> | string
     channelId?: StringWithAggregatesFilter<"PostDelivery"> | string
+    revision?: IntWithAggregatesFilter<"PostDelivery"> | number
     status?: EnumDeliveryStatusWithAggregatesFilter<"PostDelivery"> | $Enums.DeliveryStatus
     telegramMessageId?: StringNullableWithAggregatesFilter<"PostDelivery"> | string | null
     attempts?: IntWithAggregatesFilter<"PostDelivery"> | number
@@ -6486,6 +6509,7 @@ export namespace Prisma {
 
   export type PostDeliveryCreateInput = {
     id?: string
+    revision?: number
     status?: $Enums.DeliveryStatus
     telegramMessageId?: string | null
     attempts?: number
@@ -6501,6 +6525,7 @@ export namespace Prisma {
     id?: string
     postId: string
     channelId: string
+    revision?: number
     status?: $Enums.DeliveryStatus
     telegramMessageId?: string | null
     attempts?: number
@@ -6512,6 +6537,7 @@ export namespace Prisma {
 
   export type PostDeliveryUpdateInput = {
     id?: StringFieldUpdateOperationsInput | string
+    revision?: IntFieldUpdateOperationsInput | number
     status?: EnumDeliveryStatusFieldUpdateOperationsInput | $Enums.DeliveryStatus
     telegramMessageId?: NullableStringFieldUpdateOperationsInput | string | null
     attempts?: IntFieldUpdateOperationsInput | number
@@ -6527,6 +6553,7 @@ export namespace Prisma {
     id?: StringFieldUpdateOperationsInput | string
     postId?: StringFieldUpdateOperationsInput | string
     channelId?: StringFieldUpdateOperationsInput | string
+    revision?: IntFieldUpdateOperationsInput | number
     status?: EnumDeliveryStatusFieldUpdateOperationsInput | $Enums.DeliveryStatus
     telegramMessageId?: NullableStringFieldUpdateOperationsInput | string | null
     attempts?: IntFieldUpdateOperationsInput | number
@@ -6540,6 +6567,7 @@ export namespace Prisma {
     id?: string
     postId: string
     channelId: string
+    revision?: number
     status?: $Enums.DeliveryStatus
     telegramMessageId?: string | null
     attempts?: number
@@ -6551,6 +6579,7 @@ export namespace Prisma {
 
   export type PostDeliveryUpdateManyMutationInput = {
     id?: StringFieldUpdateOperationsInput | string
+    revision?: IntFieldUpdateOperationsInput | number
     status?: EnumDeliveryStatusFieldUpdateOperationsInput | $Enums.DeliveryStatus
     telegramMessageId?: NullableStringFieldUpdateOperationsInput | string | null
     attempts?: IntFieldUpdateOperationsInput | number
@@ -6564,6 +6593,7 @@ export namespace Prisma {
     id?: StringFieldUpdateOperationsInput | string
     postId?: StringFieldUpdateOperationsInput | string
     channelId?: StringFieldUpdateOperationsInput | string
+    revision?: IntFieldUpdateOperationsInput | number
     status?: EnumDeliveryStatusFieldUpdateOperationsInput | $Enums.DeliveryStatus
     telegramMessageId?: NullableStringFieldUpdateOperationsInput | string | null
     attempts?: IntFieldUpdateOperationsInput | number
@@ -6887,13 +6917,6 @@ export namespace Prisma {
     _max?: NestedJsonFilter<$PrismaModel>
   }
 
-  export type EnumDeliveryStatusFilter<$PrismaModel = never> = {
-    equals?: $Enums.DeliveryStatus | EnumDeliveryStatusFieldRefInput<$PrismaModel>
-    in?: $Enums.DeliveryStatus[] | ListEnumDeliveryStatusFieldRefInput<$PrismaModel>
-    notIn?: $Enums.DeliveryStatus[] | ListEnumDeliveryStatusFieldRefInput<$PrismaModel>
-    not?: NestedEnumDeliveryStatusFilter<$PrismaModel> | $Enums.DeliveryStatus
-  }
-
   export type IntFilter<$PrismaModel = never> = {
     equals?: number | IntFieldRefInput<$PrismaModel>
     in?: number[] | ListIntFieldRefInput<$PrismaModel>
@@ -6903,6 +6926,13 @@ export namespace Prisma {
     gt?: number | IntFieldRefInput<$PrismaModel>
     gte?: number | IntFieldRefInput<$PrismaModel>
     not?: NestedIntFilter<$PrismaModel> | number
+  }
+
+  export type EnumDeliveryStatusFilter<$PrismaModel = never> = {
+    equals?: $Enums.DeliveryStatus | EnumDeliveryStatusFieldRefInput<$PrismaModel>
+    in?: $Enums.DeliveryStatus[] | ListEnumDeliveryStatusFieldRefInput<$PrismaModel>
+    notIn?: $Enums.DeliveryStatus[] | ListEnumDeliveryStatusFieldRefInput<$PrismaModel>
+    not?: NestedEnumDeliveryStatusFilter<$PrismaModel> | $Enums.DeliveryStatus
   }
 
   export type DateTimeNullableFilter<$PrismaModel = never> = {
@@ -6921,15 +6951,17 @@ export namespace Prisma {
     isNot?: PostWhereInput
   }
 
-  export type PostDeliveryPostIdChannelIdCompoundUniqueInput = {
+  export type PostDeliveryPostIdChannelIdRevisionCompoundUniqueInput = {
     postId: string
     channelId: string
+    revision: number
   }
 
   export type PostDeliveryCountOrderByAggregateInput = {
     id?: SortOrder
     postId?: SortOrder
     channelId?: SortOrder
+    revision?: SortOrder
     status?: SortOrder
     telegramMessageId?: SortOrder
     attempts?: SortOrder
@@ -6940,6 +6972,7 @@ export namespace Prisma {
   }
 
   export type PostDeliveryAvgOrderByAggregateInput = {
+    revision?: SortOrder
     attempts?: SortOrder
   }
 
@@ -6947,6 +6980,7 @@ export namespace Prisma {
     id?: SortOrder
     postId?: SortOrder
     channelId?: SortOrder
+    revision?: SortOrder
     status?: SortOrder
     telegramMessageId?: SortOrder
     attempts?: SortOrder
@@ -6960,6 +6994,7 @@ export namespace Prisma {
     id?: SortOrder
     postId?: SortOrder
     channelId?: SortOrder
+    revision?: SortOrder
     status?: SortOrder
     telegramMessageId?: SortOrder
     attempts?: SortOrder
@@ -6970,17 +7005,8 @@ export namespace Prisma {
   }
 
   export type PostDeliverySumOrderByAggregateInput = {
+    revision?: SortOrder
     attempts?: SortOrder
-  }
-
-  export type EnumDeliveryStatusWithAggregatesFilter<$PrismaModel = never> = {
-    equals?: $Enums.DeliveryStatus | EnumDeliveryStatusFieldRefInput<$PrismaModel>
-    in?: $Enums.DeliveryStatus[] | ListEnumDeliveryStatusFieldRefInput<$PrismaModel>
-    notIn?: $Enums.DeliveryStatus[] | ListEnumDeliveryStatusFieldRefInput<$PrismaModel>
-    not?: NestedEnumDeliveryStatusWithAggregatesFilter<$PrismaModel> | $Enums.DeliveryStatus
-    _count?: NestedIntFilter<$PrismaModel>
-    _min?: NestedEnumDeliveryStatusFilter<$PrismaModel>
-    _max?: NestedEnumDeliveryStatusFilter<$PrismaModel>
   }
 
   export type IntWithAggregatesFilter<$PrismaModel = never> = {
@@ -6997,6 +7023,16 @@ export namespace Prisma {
     _sum?: NestedIntFilter<$PrismaModel>
     _min?: NestedIntFilter<$PrismaModel>
     _max?: NestedIntFilter<$PrismaModel>
+  }
+
+  export type EnumDeliveryStatusWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: $Enums.DeliveryStatus | EnumDeliveryStatusFieldRefInput<$PrismaModel>
+    in?: $Enums.DeliveryStatus[] | ListEnumDeliveryStatusFieldRefInput<$PrismaModel>
+    notIn?: $Enums.DeliveryStatus[] | ListEnumDeliveryStatusFieldRefInput<$PrismaModel>
+    not?: NestedEnumDeliveryStatusWithAggregatesFilter<$PrismaModel> | $Enums.DeliveryStatus
+    _count?: NestedIntFilter<$PrismaModel>
+    _min?: NestedEnumDeliveryStatusFilter<$PrismaModel>
+    _max?: NestedEnumDeliveryStatusFilter<$PrismaModel>
   }
 
   export type DateTimeNullableWithAggregatesFilter<$PrismaModel = never> = {
@@ -7189,16 +7225,16 @@ export namespace Prisma {
     connect?: ChannelWhereUniqueInput
   }
 
-  export type EnumDeliveryStatusFieldUpdateOperationsInput = {
-    set?: $Enums.DeliveryStatus
-  }
-
   export type IntFieldUpdateOperationsInput = {
     set?: number
     increment?: number
     decrement?: number
     multiply?: number
     divide?: number
+  }
+
+  export type EnumDeliveryStatusFieldUpdateOperationsInput = {
+    set?: $Enums.DeliveryStatus
   }
 
   export type NullableDateTimeFieldUpdateOperationsInput = {
@@ -7418,16 +7454,6 @@ export namespace Prisma {
     not?: NestedDateTimeNullableFilter<$PrismaModel> | Date | string | null
   }
 
-  export type NestedEnumDeliveryStatusWithAggregatesFilter<$PrismaModel = never> = {
-    equals?: $Enums.DeliveryStatus | EnumDeliveryStatusFieldRefInput<$PrismaModel>
-    in?: $Enums.DeliveryStatus[] | ListEnumDeliveryStatusFieldRefInput<$PrismaModel>
-    notIn?: $Enums.DeliveryStatus[] | ListEnumDeliveryStatusFieldRefInput<$PrismaModel>
-    not?: NestedEnumDeliveryStatusWithAggregatesFilter<$PrismaModel> | $Enums.DeliveryStatus
-    _count?: NestedIntFilter<$PrismaModel>
-    _min?: NestedEnumDeliveryStatusFilter<$PrismaModel>
-    _max?: NestedEnumDeliveryStatusFilter<$PrismaModel>
-  }
-
   export type NestedIntWithAggregatesFilter<$PrismaModel = never> = {
     equals?: number | IntFieldRefInput<$PrismaModel>
     in?: number[] | ListIntFieldRefInput<$PrismaModel>
@@ -7453,6 +7479,16 @@ export namespace Prisma {
     gt?: number | FloatFieldRefInput<$PrismaModel>
     gte?: number | FloatFieldRefInput<$PrismaModel>
     not?: NestedFloatFilter<$PrismaModel> | number
+  }
+
+  export type NestedEnumDeliveryStatusWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: $Enums.DeliveryStatus | EnumDeliveryStatusFieldRefInput<$PrismaModel>
+    in?: $Enums.DeliveryStatus[] | ListEnumDeliveryStatusFieldRefInput<$PrismaModel>
+    notIn?: $Enums.DeliveryStatus[] | ListEnumDeliveryStatusFieldRefInput<$PrismaModel>
+    not?: NestedEnumDeliveryStatusWithAggregatesFilter<$PrismaModel> | $Enums.DeliveryStatus
+    _count?: NestedIntFilter<$PrismaModel>
+    _min?: NestedEnumDeliveryStatusFilter<$PrismaModel>
+    _max?: NestedEnumDeliveryStatusFilter<$PrismaModel>
   }
 
   export type NestedDateTimeNullableWithAggregatesFilter<$PrismaModel = never> = {
@@ -7499,6 +7535,7 @@ export namespace Prisma {
 
   export type PostDeliveryCreateWithoutChannelInput = {
     id?: string
+    revision?: number
     status?: $Enums.DeliveryStatus
     telegramMessageId?: string | null
     attempts?: number
@@ -7512,6 +7549,7 @@ export namespace Prisma {
   export type PostDeliveryUncheckedCreateWithoutChannelInput = {
     id?: string
     postId: string
+    revision?: number
     status?: $Enums.DeliveryStatus
     telegramMessageId?: string | null
     attempts?: number
@@ -7583,6 +7621,7 @@ export namespace Prisma {
     id?: StringFilter<"PostDelivery"> | string
     postId?: StringFilter<"PostDelivery"> | string
     channelId?: StringFilter<"PostDelivery"> | string
+    revision?: IntFilter<"PostDelivery"> | number
     status?: EnumDeliveryStatusFilter<"PostDelivery"> | $Enums.DeliveryStatus
     telegramMessageId?: StringNullableFilter<"PostDelivery"> | string | null
     attempts?: IntFilter<"PostDelivery"> | number
@@ -7658,6 +7697,7 @@ export namespace Prisma {
 
   export type PostDeliveryCreateWithoutPostInput = {
     id?: string
+    revision?: number
     status?: $Enums.DeliveryStatus
     telegramMessageId?: string | null
     attempts?: number
@@ -7671,6 +7711,7 @@ export namespace Prisma {
   export type PostDeliveryUncheckedCreateWithoutPostInput = {
     id?: string
     channelId: string
+    revision?: number
     status?: $Enums.DeliveryStatus
     telegramMessageId?: string | null
     attempts?: number
@@ -7838,6 +7879,7 @@ export namespace Prisma {
   export type PostDeliveryCreateManyChannelInput = {
     id?: string
     postId: string
+    revision?: number
     status?: $Enums.DeliveryStatus
     telegramMessageId?: string | null
     attempts?: number
@@ -7876,6 +7918,7 @@ export namespace Prisma {
 
   export type PostDeliveryUpdateWithoutChannelInput = {
     id?: StringFieldUpdateOperationsInput | string
+    revision?: IntFieldUpdateOperationsInput | number
     status?: EnumDeliveryStatusFieldUpdateOperationsInput | $Enums.DeliveryStatus
     telegramMessageId?: NullableStringFieldUpdateOperationsInput | string | null
     attempts?: IntFieldUpdateOperationsInput | number
@@ -7889,6 +7932,7 @@ export namespace Prisma {
   export type PostDeliveryUncheckedUpdateWithoutChannelInput = {
     id?: StringFieldUpdateOperationsInput | string
     postId?: StringFieldUpdateOperationsInput | string
+    revision?: IntFieldUpdateOperationsInput | number
     status?: EnumDeliveryStatusFieldUpdateOperationsInput | $Enums.DeliveryStatus
     telegramMessageId?: NullableStringFieldUpdateOperationsInput | string | null
     attempts?: IntFieldUpdateOperationsInput | number
@@ -7901,6 +7945,7 @@ export namespace Prisma {
   export type PostDeliveryUncheckedUpdateManyWithoutChannelInput = {
     id?: StringFieldUpdateOperationsInput | string
     postId?: StringFieldUpdateOperationsInput | string
+    revision?: IntFieldUpdateOperationsInput | number
     status?: EnumDeliveryStatusFieldUpdateOperationsInput | $Enums.DeliveryStatus
     telegramMessageId?: NullableStringFieldUpdateOperationsInput | string | null
     attempts?: IntFieldUpdateOperationsInput | number
@@ -7913,6 +7958,7 @@ export namespace Prisma {
   export type PostDeliveryCreateManyPostInput = {
     id?: string
     channelId: string
+    revision?: number
     status?: $Enums.DeliveryStatus
     telegramMessageId?: string | null
     attempts?: number
@@ -7924,6 +7970,7 @@ export namespace Prisma {
 
   export type PostDeliveryUpdateWithoutPostInput = {
     id?: StringFieldUpdateOperationsInput | string
+    revision?: IntFieldUpdateOperationsInput | number
     status?: EnumDeliveryStatusFieldUpdateOperationsInput | $Enums.DeliveryStatus
     telegramMessageId?: NullableStringFieldUpdateOperationsInput | string | null
     attempts?: IntFieldUpdateOperationsInput | number
@@ -7937,6 +7984,7 @@ export namespace Prisma {
   export type PostDeliveryUncheckedUpdateWithoutPostInput = {
     id?: StringFieldUpdateOperationsInput | string
     channelId?: StringFieldUpdateOperationsInput | string
+    revision?: IntFieldUpdateOperationsInput | number
     status?: EnumDeliveryStatusFieldUpdateOperationsInput | $Enums.DeliveryStatus
     telegramMessageId?: NullableStringFieldUpdateOperationsInput | string | null
     attempts?: IntFieldUpdateOperationsInput | number
@@ -7949,6 +7997,7 @@ export namespace Prisma {
   export type PostDeliveryUncheckedUpdateManyWithoutPostInput = {
     id?: StringFieldUpdateOperationsInput | string
     channelId?: StringFieldUpdateOperationsInput | string
+    revision?: IntFieldUpdateOperationsInput | number
     status?: EnumDeliveryStatusFieldUpdateOperationsInput | $Enums.DeliveryStatus
     telegramMessageId?: NullableStringFieldUpdateOperationsInput | string | null
     attempts?: IntFieldUpdateOperationsInput | number

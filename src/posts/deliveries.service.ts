@@ -107,23 +107,23 @@ export class DeliveriesService {
     postId: string,
     channelId: string,
   ): Promise<PostDelivery> {
-    const delivery = await this.prisma.postDelivery.upsert({
-      where: {
-        postId_channelId: { postId, channelId },
-      },
-      create: {
+    const existing = await this.prisma.postDelivery.findFirst({
+      where: { postId, channelId, revision: 0 },
+    });
+
+    if (existing) {
+      return existing;
+    }
+
+    return this.prisma.postDelivery.create({
+      data: {
         postId,
         channelId,
+        revision: 0,
         status: DeliveryStatus.PENDING,
         attempts: 0,
       },
-      update: {
-        // If already exists and not sent, keep as is
-        // Status updates are handled by the processor
-      },
     });
-
-    return delivery;
   }
 
   /**

@@ -2,13 +2,16 @@ import {
   Controller,
   Get,
   Post,
+  Patch,
   Param,
   Query,
   HttpCode,
   HttpStatus,
+  Body,
 } from '@nestjs/common';
 import { PostsService } from './posts.service';
 import { PostQueryDto } from './dto/post-query.dto';
+import { UpdatePostDto } from './dto/update-post.dto';
 
 @Controller('posts')
 export class PostsController {
@@ -33,5 +36,12 @@ export class PostsController {
   @HttpCode(HttpStatus.OK)
   retry(@Param('id') id: string) {
     return this.postsService.retryPost(id);
+  }
+
+  @Patch(':id')
+  update(@Param('id') id: string, @Body() dto: UpdatePostDto) {
+    return this.postsService.updatePostPayload(id, dto.payload, {
+      createEditDeliveries: dto.createEditDeliveries,
+    });
   }
 }

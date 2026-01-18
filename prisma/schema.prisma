@@ -94,6 +94,7 @@ model PostDelivery {
   id                String         @id @default(cuid())
   postId            String
   channelId         String
+  revision          Int            @default(0) // 0 = initial send, 1+ = edits/updates
   status            DeliveryStatus @default(PENDING)
   telegramMessageId String?        // Telegram message_id after successful send
   attempts          Int            @default(0)
@@ -106,7 +107,7 @@ model PostDelivery {
   post    Post    @relation(fields: [postId], references: [id], onDelete: Cascade)
   channel Channel @relation(fields: [channelId], references: [id], onDelete: Cascade)
 
-  @@unique([postId, channelId])
+  @@unique([postId, channelId, revision])
   @@index([status])
   @@index([channelId])
   @@index([createdAt])
