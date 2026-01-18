@@ -20,17 +20,18 @@ export class ArticlePublishedDto {
   @IsOptional()
   excerpt?: string;
 
-  @IsUrl()
+  // Allow localhost / internal hosts (e.g. MinIO) for dev environments.
+  @IsUrl({ require_protocol: true, require_tld: false })
   @IsNotEmpty()
   url: string;
 
-  @IsUrl()
+  @IsUrl({ require_protocol: true, require_tld: false })
   @IsOptional()
   coverUrl?: string;
 
   @IsOptional()
   @IsArray()
-  @IsUrl({}, { each: true })
+  @IsUrl({ require_protocol: true, require_tld: false }, { each: true })
   @ArrayMaxSize(10, {
     message: 'mediaUrls can contain maximum 10 items (Telegram limit)',
   })
