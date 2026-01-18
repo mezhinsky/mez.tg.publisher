@@ -1,6 +1,6 @@
 import { Injectable, OnModuleInit, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Telegraf } from 'telegraf';
+import { Telegraf, Input } from 'telegraf';
 
 export interface SendMessageOptions {
   chatId: string;
@@ -40,12 +40,18 @@ export class TelegramService implements OnModuleInit {
   private bot: Telegraf;
   private isInitialized = false;
   private strictInit = false;
+  private mediaUrlRewriteFrom?: string;
+  private mediaUrlRewriteTo?: string;
 
   constructor(private readonly configService: ConfigService) {}
 
   async onModuleInit() {
     const token = this.configService.get<string>('telegram.botToken');
     this.strictInit = this.configService.get<boolean>('telegram.strictInit') ?? false;
+    this.mediaUrlRewriteFrom =
+      this.configService.get<string>('media.urlRewriteFrom') || undefined;
+    this.mediaUrlRewriteTo =
+      this.configService.get<string>('media.urlRewriteTo') || undefined;
 
     if (!token) {
       this.logger.warn(
@@ -123,10 +129,37 @@ export class TelegramService implements OnModuleInit {
 
     this.logger.debug(`Sending photo to ${chatId}`);
 
-    const result = await this.bot.telegram.sendPhoto(chatId, photoUrl, {
-      caption,
-      parse_mode: parseMode,
-    });
+    const direct = this.shouldUploadInsteadOfUrl(photoUrl)
+      ? null
+      : photoUrl;
+
+    if (direct) {
+      try {
+        const result = await this.bot.telegram.sendPhoto(chatId, direct, {
+          caption,
+          parse_mode: parseMode,
+        });
+
+        return {
+          messageId: result.message_id,
+          chatId: result.chat.id,
+        };
+      } catch (error) {
+        if (!this.isTelegramRemoteFetchError(error)) {
+          throw error;
+        }
+        this.logger.warn(
+          `Telegram failed to fetch photo by URL, falling back to upload: ${photoUrl}`,
+        );
+      }
+    }
+
+    const { buffer, filename } = await this.fetchImage(photoUrl);
+    const result = await this.bot.telegram.sendPhoto(
+      chatId,
+      Input.fromBuffer(buffer, filename),
+      { caption, parse_mode: parseMode },
+    );
 
     return {
       messageId: result.message_id,
@@ -161,10 +194,43 @@ export class TelegramService implements OnModuleInit {
       `Sending media group (${mediaUrls.length} photos) to ${chatId}`,
     );
 
-    const media = mediaUrls.map((url, index) => ({
+    const canSendByUrl = mediaUrls.every((u) => !this.shouldUploadInsteadOfUrl(u));
+
+    if (canSendByUrl) {
+      try {
+        const media = mediaUrls.map((url, index) => ({
+          type: 'photo' as const,
+          media: url,
+          // Caption only on the first photo
+          ...(index === 0 && caption ? { caption, parse_mode: parseMode } : {}),
+        }));
+
+        const results = await this.bot.telegram.sendMediaGroup(chatId, media);
+
+        return {
+          messageIds: results.map((msg) => msg.message_id),
+          chatId: results[0].chat.id,
+        };
+      } catch (error) {
+        if (!this.isTelegramRemoteFetchError(error)) {
+          throw error;
+        }
+        this.logger.warn(
+          `Telegram failed to fetch media group by URL, falling back to upload (${mediaUrls.length} items)`,
+        );
+      }
+    }
+
+    const uploaded = await Promise.all(
+      mediaUrls.map(async (url) => {
+        const { buffer, filename } = await this.fetchImage(url);
+        return Input.fromBuffer(buffer, filename);
+      }),
+    );
+
+    const media = uploaded.map((file, index) => ({
       type: 'photo' as const,
-      media: url,
-      // Caption only on the first photo
+      media: file,
       ...(index === 0 && caption ? { caption, parse_mode: parseMode } : {}),
     }));
 
@@ -174,6 +240,87 @@ export class TelegramService implements OnModuleInit {
       messageIds: results.map((msg) => msg.message_id),
       chatId: results[0].chat.id,
     };
+  }
+
+  private isTelegramRemoteFetchError(error: unknown): boolean {
+    const message = error instanceof Error ? error.message : String(error);
+    return (
+      message.includes('wrong type of the web page content') ||
+      message.includes('failed to get HTTP URL content') ||
+      message.includes('WEBPAGE_CURL_FAILED') ||
+      message.includes('Bad Request')
+    );
+  }
+
+  private shouldUploadInsteadOfUrl(url: string): boolean {
+    try {
+      const parsed = new URL(url);
+      // Telegram can't reach localhost / loopback; prefer uploading from server-side fetch.
+      if (
+        parsed.hostname === 'localhost' ||
+        parsed.hostname === '127.0.0.1' ||
+        parsed.hostname === '0.0.0.0'
+      ) {
+        return true;
+      }
+    } catch {
+      // If it isn't a valid URL, Telegram won't fetch it anyway.
+      return true;
+    }
+
+    if (this.mediaUrlRewriteFrom && this.mediaUrlRewriteTo) {
+      return url.startsWith(this.mediaUrlRewriteFrom);
+    }
+
+    return false;
+  }
+
+  private rewriteUrlForFetch(url: string): string {
+    if (this.mediaUrlRewriteFrom && this.mediaUrlRewriteTo) {
+      if (url.startsWith(this.mediaUrlRewriteFrom)) {
+        return `${this.mediaUrlRewriteTo}${url.slice(this.mediaUrlRewriteFrom.length)}`;
+      }
+    }
+    return url;
+  }
+
+  private async fetchImage(
+    url: string,
+  ): Promise<{ buffer: Buffer; filename: string }> {
+    const rewritten = this.rewriteUrlForFetch(url);
+    this.logger.debug(`Fetching media for upload: ${rewritten}`);
+
+    const response = await fetch(rewritten, { redirect: 'follow' });
+    if (!response.ok) {
+      throw new Error(`Failed to fetch media (${response.status})`);
+    }
+
+    const contentType = response.headers.get('content-type') || '';
+    if (!contentType.toLowerCase().startsWith('image/')) {
+      throw new Error(
+        `Fetched media is not an image (content-type: ${contentType || 'n/a'})`,
+      );
+    }
+
+    const arrayBuffer = await response.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+
+    // Best-effort filename for Telegram upload.
+    let filename = 'image';
+    try {
+      const u = new URL(rewritten);
+      const last = u.pathname.split('/').filter(Boolean).pop();
+      if (last) filename = last;
+    } catch {
+      // ignore
+    }
+    if (!filename.includes('.')) {
+      const ext = contentType.split('/')[1]?.split(';')[0]?.trim();
+      if (ext) filename = `${filename}.${ext}`;
+      else filename = `${filename}.jpg`;
+    }
+
+    return { buffer, filename };
   }
 
   /**

@@ -30,4 +30,14 @@ export default () => ({
     webhookUrl: process.env.EVENTS_WEBHOOK_URL,
     webhookSecret: process.env.EVENTS_WEBHOOK_SECRET,
   },
+
+  media: {
+    // If your assets store returns URLs that are valid from the host machine
+    // (e.g. http://localhost:9000/...) but NOT from inside the tg.publisher container,
+    // set MEDIA_URL_REWRITE_FROM/MEDIA_URL_REWRITE_TO so tg.publisher can fetch the bytes
+    // and upload them to Telegram.
+    urlRewriteFrom: process.env.MEDIA_URL_REWRITE_FROM,
+    urlRewriteTo:
+      process.env.MEDIA_URL_REWRITE_TO || process.env.MINIO_INTERNAL_URL,
+  },
 });
