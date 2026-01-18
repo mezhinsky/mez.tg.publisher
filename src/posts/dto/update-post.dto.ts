@@ -1,12 +1,24 @@
-import { IsBoolean, IsObject, IsOptional } from 'class-validator';
-import { Prisma } from '../../../generated/prisma';
+import { IsArray, IsBoolean, IsOptional, IsString } from 'class-validator';
 
 export class UpdatePostDto {
-  @IsObject()
-  payload!: Prisma.JsonObject;
+  @IsOptional()
+  @IsString()
+  title?: string;
+
+  @IsOptional()
+  @IsString()
+  excerpt?: string;
+
+  @IsOptional()
+  @IsString()
+  url?: string;
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  tags?: string[];
 
   @IsOptional()
   @IsBoolean()
   createEditDeliveries?: boolean = true;
 }
-

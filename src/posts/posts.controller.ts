@@ -40,8 +40,9 @@ export class PostsController {
 
   @Patch(':id')
   update(@Param('id') id: string, @Body() dto: UpdatePostDto) {
-    return this.postsService.updatePostPayload(id, dto.payload, {
-      createEditDeliveries: dto.createEditDeliveries,
+    const { createEditDeliveries, ...fields } = dto;
+    return this.postsService.updatePostPayload(id, fields, {
+      createEditDeliveries,
     });
   }
 }

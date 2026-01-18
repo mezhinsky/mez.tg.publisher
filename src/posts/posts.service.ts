@@ -214,6 +214,13 @@ export class PostsService {
     return { retriedCount };
   }
 
+  private asJsonObject(value: unknown): Prisma.JsonObject {
+    if (value && typeof value === 'object' && !Array.isArray(value)) {
+      return value as Prisma.JsonObject;
+    }
+    return {};
+  }
+
   /**
    * Update post payload and (optionally) enqueue edit deliveries for already-sent channels.
    *
@@ -222,7 +229,7 @@ export class PostsService {
    */
   async updatePostPayload(
     id: string,
-    payload: Prisma.JsonObject,
+    patch: Partial<Pick<ArticlePayload, 'title' | 'excerpt' | 'url' | 'tags'>>,
     options?: { createEditDeliveries?: boolean },
   ): Promise<{ post: Post; editDeliveriesCreated: number }> {
     const existingPost = await this.prisma.post.findUnique({ where: { id } });
@@ -230,11 +237,29 @@ export class PostsService {
       throw new NotFoundException(`Post with id "${id}" not found`);
     }
 
-    const payloadHash = this.hashPayload(payload);
+    const existingPayload = this.asJsonObject(existingPost.payload);
+    const nextPayload: Prisma.JsonObject = { ...existingPayload };
+
+    if (patch.title !== undefined)
+      nextPayload.title = patch.title as unknown as Prisma.JsonValue;
+    if (patch.excerpt !== undefined)
+      nextPayload.excerpt = patch.excerpt as unknown as Prisma.JsonValue;
+    if (patch.url !== undefined)
+      nextPayload.url = patch.url as unknown as Prisma.JsonValue;
+    if (patch.tags !== undefined)
+      nextPayload.tags = patch.tags as unknown as Prisma.JsonValue;
+
+    const existingPayloadJson = JSON.stringify(existingPost.payload);
+    const nextPayloadJson = JSON.stringify(nextPayload);
+    if (existingPayloadJson === nextPayloadJson) {
+      return { post: existingPost, editDeliveriesCreated: 0 };
+    }
+
+    const payloadHash = this.hashPayload(nextPayload);
     const post = await this.prisma.post.update({
       where: { id },
       data: {
-        payload,
+        payload: nextPayload,
         payloadHash,
       },
     });
