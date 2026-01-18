@@ -95,7 +95,7 @@ export class PostsService {
         deliveries: {
           include: {
             channel: {
-              select: { id: true, key: true, title: true },
+              select: { id: true, key: true, title: true, username: true },
             },
           },
           orderBy: { createdAt: 'desc' },
@@ -117,7 +117,7 @@ export class PostsService {
         deliveries: {
           include: {
             channel: {
-              select: { id: true, key: true, title: true },
+              select: { id: true, key: true, title: true, username: true },
             },
           },
           orderBy: { createdAt: 'desc' },
